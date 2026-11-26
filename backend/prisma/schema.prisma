@@ -1,0 +1,346 @@
+// Tendrils SEO platform: PostgreSQL is the single source of truth.
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CrawlStatus {
+  QUEUED
+  RUNNING
+  POST_PROCESSING
+  SAVING
+  COMPLETED
+  STOPPED
+  FAILED
+}
+
+enum CrawlSource {
+  APP
+  IMPORT
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+// Ready for authentication; nothing requires a user yet (single-tenant local use).
+model User {
+  id          String           @id @default(cuid())
+  email       String           @unique
+  name        String?
+  createdAt   DateTime         @default(now())
+  projects    Project[]
+  preferences UserPreference[]
+}
+
+model Project {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String?
+  owner       User?      @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  websites    Website[]
+  crawls      CrawlJob[]
+
+  @@index([ownerId])
+}
+
+model Website {
+  id        String     @id @default(cuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  host      String
+  seedUrl   String
+  cms       Json?
+  createdAt DateTime   @default(now())
+  crawls    CrawlJob[]
+
+  @@unique([projectId, host])
+  @@index([host])
+}
+
+model CrawlJob {
+  id            String              @id @default(cuid())
+  projectId     String
+  project       Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  websiteId     String?
+  website       Website?            @relation(fields: [websiteId], references: [id], onDelete: SetNull)
+  name          String
+  seedUrl       String
+  status        CrawlStatus         @default(QUEUED)
+  source        CrawlSource         @default(APP)
+  legacyFile    String?             @unique // saved-crawl JSON file name, for idempotent import
+  savedBy       String?
+  pagesCrawled  Int                 @default(0)
+  queued        Int                 @default(0)
+  fetchErrors   Int                 @default(0)
+  progress      Json?
+  messages      Json?
+  stopReason    String?
+  error         String?
+  createdAt     DateTime            @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  updatedAt     DateTime            @updatedAt
+  configuration CrawlConfiguration?
+  pages         CrawledPage[]
+  issues        PageIssue[]
+  reports       CrawlReport[]
+  inlinks       CrawlInlink[]
+  seoScore      SeoScore?
+  categoryScores SeoCategoryScore[]
+  titleHistory  CrawlTitleHistory[]
+  comparisonsAsBase   CrawlComparison[] @relation("base")
+  comparisonsAsTarget CrawlComparison[] @relation("target")
+  conversations AiConversation[]
+
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([websiteId, finishedAt])
+  @@index([status])
+}
+
+model CrawlConfiguration {
+  id              String   @id @default(cuid())
+  crawlId         String   @unique
+  crawl           CrawlJob @relation(fields: [crawlId], references: [id], onDelete: Cascade)
+  maxPages        Int
+  maxDepth        Int
+  maxWorkers      Int
+  crawlDelay      Float
+  renderJs        Boolean
+  compareNoJs     Boolean
+  ignoreRobots    Boolean
+  ignoreNoindex   Boolean
+  solveChallenges Boolean
+  userAgent       String   @default("")
+  includePatterns String   @default("")
+  excludePatterns String   @default("")
+  sitemap         Boolean
+  nearDup         Boolean
+  nearDupThreshold Float
+  nearDupExclude  String   @default("")
+  botCheck        Boolean
+  botSample       Int
+  settings        Json // the full settings object sent to the crawler
+}
+
+model CrawledPage {
+  id              String   @id @default(cuid())
+  crawlId         String
+  crawl           CrawlJob @relation(fields: [crawlId], references: [id], onDelete: Cascade)
+  position        Int
+  url             String
+  statusCode      Int      @default(0)
+  contentType     String?
+  indexable       Boolean  @default(true)
+  depth           Int      @default(0)
+  title           String?
+  titleLength     Int      @default(0)
+  metaDescription String?
+  metaLength      Int      @default(0)
+  h1              String?
+  canonical       String?
+  wordCount       Int      @default(0)
+  internalLinks   Int      @default(0)
+  externalLinks   Int      @default(0)
+  imagesTotal     Int      @default(0)
+  imagesNoAlt     Int      @default(0)
+  responseTime    Float    @default(0)
+  redirectUrl     String?
+  inlinkCount     Int      @default(0)
+  fetchError      String?
+  issueCount      Int      @default(0)
+  criticalCount   Int      @default(0)
+  highCount       Int      @default(0)
+  seoScore        Int?
+  scoreVersion    String?
+  scoreBreakdown  Json?
+  data            Json // full crawler row, minus body_text
+  bodyText        String? // capped copy of body_text (near-duplicate re-runs, AI)
+  issues          PageIssue[]
+  categoryScores  SeoCategoryScore[]
+
+  @@unique([crawlId, url])
+  @@index([crawlId, seoScore])
+  @@index([crawlId, statusCode])
+  @@index([crawlId, position])
+}
+
+model PageIssue {
+  id              String      @id @default(cuid())
+  crawlId         String
+  crawl           CrawlJob    @relation(fields: [crawlId], references: [id], onDelete: Cascade)
+  pageId          String
+  page            CrawledPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  label           String // the crawler's issue text, verbatim
+  groupLabel      String // Summary card the issue belongs to (agent_tools.issue_group)
+  crawlerSeverity String // error | warn | info (agent_tools.sev_of)
+  severity        Severity
+  category        String
+  checkKey        String?
+  convention      Boolean     @default(false)
+
+  @@index([crawlId, groupLabel])
+  @@index([crawlId, severity])
+  @@index([pageId])
+}
+
+model CrawlReport {
+  id      String   @id @default(cuid())
+  crawlId String
+  crawl   CrawlJob @relation(fields: [crawlId], references: [id], onDelete: Cascade)
+  key     String
+  data    Json
+
+  @@unique([crawlId, key])
+}
+
+model CrawlInlink {
+  id        String   @id @default(cuid())
+  crawlId   String
+  crawl     CrawlJob @relation(fields: [crawlId], references: [id], onDelete: Cascade)
+  targetUrl String
+  sourceUrl String
+  anchor    String   @default("")
+  placement String   @default("")
+
+  @@index([crawlId, targetUrl])
+  @@index([crawlId, sourceUrl])
+}
+
+model SeoScore {
+  id               String   @id @default(cuid())
+  crawlId          String   @unique
+  crawl            CrawlJob @relation(fields: [crawlId], references: [id], onDelete: Cascade)
+  algorithmVersion String
+  pageAlgorithm    String
+  overall          Int
+  grade            String
+  components       Json
+  severityCounts   Json
+  caps             Json
+  stats            Json
+  explanation      Json
+  pagesAnalyzed    Int
+  pagesWithErrors  Int
+  pagesExcellent   Int
+  pagesNeedAttention Int
+  criticalCount    Int
+  highCount        Int
+  mediumCount      Int
+  lowCount         Int
+  computedAt       DateTime @default(now())
+}
+
+// scope "site": website component; scope "page": one page's category.
+model SeoCategoryScore {
+  id       String       @id @default(cuid())
+  crawlId  String
+  crawl    CrawlJob     @relation(fields: [crawlId], references: [id], onDelete: Cascade)
+  pageId   String?
+  page     CrawledPage? @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  scope    String
+  category String
+  score    Int?
+  weight   Float
+  earned   Float
+  possible Float
+  passed   Int
+  failed   Int
+
+  @@index([crawlId, scope, category])
+  @@index([pageId])
+}
+
+model CrawlComparison {
+  id             String   @id @default(cuid())
+  baseCrawlId    String
+  base           CrawlJob @relation("base", fields: [baseCrawlId], references: [id], onDelete: Cascade)
+  targetCrawlId  String
+  target         CrawlJob @relation("target", fields: [targetCrawlId], references: [id], onDelete: Cascade)
+  algorithmVersion String
+  result         Json
+  createdAt      DateTime @default(now())
+
+  @@unique([baseCrawlId, targetCrawlId, algorithmVersion])
+}
+
+model AiConversation {
+  id        String      @id // 16-hex ids, same format as the old SQLite store
+  kind      String
+  crawlId   String?
+  crawl     CrawlJob?   @relation(fields: [crawlId], references: [id], onDelete: SetNull)
+  crawlRef  String      @default("") // crawl id (or legacy crawl_file for unmatched imports)
+  ref       String      @default("")
+  title     String      @default("")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @default(now())
+  messages  AiMessage[]
+
+  @@index([crawlRef, updatedAt(sort: Desc)])
+  @@index([crawlId])
+}
+
+model AiMessage {
+  id               Int            @id @default(autoincrement())
+  conversationId   String
+  conversation     AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  legacyId         Int?
+  role             String
+  content          String
+  structured       Json?
+  model            String?
+  promptTokens     Int?
+  completionTokens Int?
+  createdAt        DateTime       @default(now())
+
+  @@unique([conversationId, legacyId])
+  @@index([conversationId, id])
+}
+
+model CrawlTitleHistory {
+  id              String    @id @default(cuid())
+  crawlId         String?
+  crawl           CrawlJob? @relation(fields: [crawlId], references: [id], onDelete: SetNull)
+  crawlName       String
+  seed            String    @default("")
+  url             String
+  title           String    @default("")
+  metaDescription String    @default("")
+  ts              DateTime
+
+  @@unique([crawlName, url, ts])
+  @@index([url, ts])
+}
+
+model UserPreference {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+}
+
+model ImportRun {
+  id         String    @id @default(cuid())
+  sourceDir  String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  stats      Json?
+  errors     Json?
+  log        Json?
+}

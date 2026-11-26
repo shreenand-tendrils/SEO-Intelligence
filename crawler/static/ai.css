@@ -1,0 +1,51 @@
+/* AI SEO Consultant drawer. Uses the app's theme variables, so light and dark both work. */
+.aic { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); z-index: 9000; display: flex; flex-direction: column;
+  background: var(--surface, #fff); color: var(--text, #1f2328); border-left: 1px solid var(--border, #d6dbe0);
+  box-shadow: -12px 0 32px rgba(0,0,0,.18); font-size: 13px; }
+.aic[hidden] { display: none; }
+.aic-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border-subtle, #e6e9ed); }
+.aic-head h2 { margin: 0; font-size: 15px; font-weight: 650; }
+.aic-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--accent-bg, #e8f0fb); color: var(--accent, #0a5bc4); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aic-spacer { flex: 1; }
+.aic-x { background: none; border: 0; font-size: 22px; line-height: 1; cursor: pointer; color: var(--text-muted, #5f6872); }
+#aic-status { padding: 0 14px; }
+#aic-status:not(:empty) { padding-top: 10px; }
+.aic-tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--border-subtle, #e6e9ed); }
+.aic-tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 7px 10px; cursor: pointer; color: var(--text-muted, #5f6872); font: inherit; }
+.aic-tab[aria-selected="true"] { color: var(--accent, #0a5bc4); border-bottom-color: var(--accent, #0a5bc4); font-weight: 600; }
+.aic-body { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; }
+.aic-pane[hidden] { display: none; }
+.aic-pane { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
+.aic-foot { padding: 8px 14px; border-top: 1px solid var(--border-subtle, #e6e9ed); color: var(--text-muted, #5f6872); font-size: 11px; }
+.aic-lede { margin: 0; color: var(--text-muted, #5f6872); }
+.aic-actions { display: flex; align-items: center; gap: 8px; }
+.aic-btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border, #d6dbe0); background: var(--surface2, #f6f8fa); color: inherit; cursor: pointer; font: inherit; }
+.aic-btn.aic-primary { background: var(--accent, #0a5bc4); border-color: var(--accent, #0a5bc4); color: var(--on-accent, #fff); }
+.aic-btn:disabled { opacity: .55; cursor: progress; }
+.aic-link { background: none; border: 0; padding: 4px 0; color: var(--accent, #0a5bc4); cursor: pointer; font: inherit; text-decoration: underline; }
+.aic-input { width: 100%; box-sizing: border-box; padding: 7px 9px; border-radius: 6px; border: 1px solid var(--border, #d6dbe0); background: var(--surface, #fff); color: inherit; font: inherit; resize: vertical; }
+.aic-error { border: 1px solid #d93025; background: rgba(217,48,37,.08); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.aic-ok { border: 1px solid #1e8e3e; background: rgba(30,142,62,.08); border-radius: 8px; padding: 8px 12px; }
+.aic-muted { color: var(--text-muted, #5f6872); }
+.aic-note { font-size: 11px; margin-top: 6px; }
+.aic-log { flex: 1; min-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.aic-msg { padding: 8px 11px; border-radius: 8px; max-width: 94%; line-height: 1.45; }
+.aic-msg.user { align-self: flex-end; background: var(--accent-bg, #e8f0fb); }
+.aic-msg.assistant { align-self: flex-start; background: var(--surface2, #f6f8fa); border: 1px solid var(--border-subtle, #e6e9ed); }
+.aic-msg p, .aic-md p { margin: 0 0 6px; } .aic-md ul { margin: 0 0 6px; padding-left: 18px; } .aic-md h4 { margin: 4px 0; }
+.aic-md code { background: rgba(127,127,127,.18); padding: 0 4px; border-radius: 3px; }
+.aic-compose { display: flex; flex-direction: column; gap: 6px; }
+.aic-card { display: flex; flex-direction: column; gap: 10px; }
+.aic-headline { font-size: 14px; font-weight: 600; line-height: 1.4; }
+.aic-block { border: 1px solid var(--border-subtle, #e6e9ed); border-radius: 8px; padding: 9px 11px; }
+.aic-block h4 { margin: 0 0 5px; font-size: 13px; }
+.aic-block p { margin: 0 0 4px; } .aic-block ul, .aic-block ol { margin: 0; padding-left: 18px; }
+.aic-block li { margin-bottom: 5px; }
+.aic-pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 10px; background: var(--surface2, #eef1f4); color: var(--text-muted, #5f6872); vertical-align: middle; }
+.aic-pill.sev-error, .aic-pill.lvl-high, .aic-pill.health-poor, .aic-pill.verdict-regressed, .aic-pill.trend-worsening { background: rgba(217,48,37,.14); color: #b3261e; }
+.aic-pill.sev-warn, .aic-pill.lvl-med, .aic-pill.health-needs_work, .aic-pill.verdict-mixed, .aic-pill.trend-mixed { background: rgba(240,170,0,.18); color: #8a5a00; }
+.aic-pill.sev-info, .aic-pill.lvl-low, .aic-pill.health-good, .aic-pill.verdict-improved, .aic-pill.trend-improving { background: rgba(30,142,62,.14); color: #1e7a34; }
+[data-theme="dark"] .aic-pill.sev-error, [data-theme="dark"] .aic-pill.lvl-high { color: #f28b82; }
+[data-theme="dark"] .aic-pill.sev-warn, [data-theme="dark"] .aic-pill.lvl-med { color: #fdd663; }
+[data-theme="dark"] .aic-pill.sev-info, [data-theme="dark"] .aic-pill.lvl-low { color: #81c995; }
+#dock-pane-ai { padding: 10px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }

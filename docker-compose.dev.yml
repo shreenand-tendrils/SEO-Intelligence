@@ -1,0 +1,7 @@
+# Dev overrides: publish Postgres and the API on localhost only.
+services:
+  postgres:
+    ports: ["127.0.0.1:5432:5432"]
+  backend:
+    ports: ["127.0.0.1:4000:4000"]
+    environment: { NODE_ENV: development, LOG_LEVEL: debug }

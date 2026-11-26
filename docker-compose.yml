@@ -1,0 +1,59 @@
+# Local / staging stack. Copy .env.example to .env first.
+name: tendrils-seo
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-seo}
+      POSTGRES_USER: ${POSTGRES_USER:-seo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  crawler:
+    build: { context: ./crawler, args: { INSTALL_PLAYWRIGHT: "${INSTALL_PLAYWRIGHT:-false}" } }
+    environment:
+      BACKEND_INTERNAL_URL: http://backend:4000
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN in .env}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-}
+    volumes: [crawlerhome:/home/app]
+    networks: [internal, public]
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-seo}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-seo}?schema=public
+      CRAWLER_INTERNAL_URL: http://crawler:5002
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      LEGACY_DATA_DIR: /legacy
+    volumes:
+      - ${LEGACY_DATA_DIR:-./infra/empty-legacy}:/legacy:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [internal]
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports: ["${FRONTEND_PORT:-8080}:8080"]
+    depends_on:
+      backend: { condition: service_healthy }
+    networks: [internal, public]
+    restart: unless-stopped
+
+networks:
+  internal: { internal: true }
+  public: {}
+
+volumes:
+  pgdata:
+  crawlerhome:
