@@ -5895,5 +5895,5 @@ def export_crawl_sitemap():
 
 
 if __name__ == "__main__":
-    app.run(host=os.environ.get("CRAWLER_HOST", "0.0.0.0"), port=int(os.environ.get("CRAWLER_PORT", "5002")), debug=False, threaded=True)
+    app.run(host=os.environ.get("CRAWLER_HOST", "0.0.0.0"), port=int(os.environ.get("PORT", os.environ.get("CRAWLER_PORT", "5002"))), debug=False, threaded=True)
 

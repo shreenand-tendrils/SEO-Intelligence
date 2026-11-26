@@ -10,5 +10,5 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 COPY --chown=app:app . .
 USER app
 EXPOSE 5002
-HEALTHCHECK --interval=15s --timeout=5s --retries=5 CMD python -c "import os,urllib.request;r=urllib.request.Request('http://127.0.0.1:5002/internal/health',headers={'X-Internal-Token':os.environ.get('INTERNAL_API_TOKEN','')});urllib.request.urlopen(r,timeout=4)"
+HEALTHCHECK --interval=15s --timeout=5s --retries=5 CMD python -c "import os,urllib.request;r=urllib.request.Request('http://127.0.0.1:' + os.environ.get('PORT',os.environ.get('CRAWLER_PORT','5002')) + '/internal/health',headers={'X-Internal-Token':os.environ.get('INTERNAL_API_TOKEN','')});urllib.request.urlopen(r,timeout=4)"
 CMD ["python", "app.py"]
