@@ -16,5 +16,5 @@ COPY --chown=app:app prisma ./prisma
 COPY --chown=app:app src ./src
 USER app
 EXPOSE 4000
-HEALTHCHECK --interval=15s --timeout=5s --retries=5 CMD wget -qO- http://127.0.0.1:4000/api/health >/dev/null || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --retries=5 CMD wget -qO- "http://127.0.0.1:${PORT:-4000}/api/health" >/dev/null || exit 1
 CMD ["sh", "-c", "npx prisma migrate deploy && node src/server.js"]
