@@ -1,6 +1,7 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 CRAWLER_HOST=0.0.0.0 CRAWLER_PORT=5002 HOME=/home/app
 ARG INSTALL_PLAYWRIGHT=false
+RUN apt-get update && apt-get install -y --no-install-recommends libatomic1 && rm -rf /var/lib/apt/lists/*
 RUN useradd -m -u 10001 app
 WORKDIR /app
 COPY requirements.txt ./
